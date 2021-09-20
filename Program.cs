@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
@@ -13,7 +15,7 @@ namespace MSATClient
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Listening...");
+            Console.WriteLine("Socket...");
             IPEndPoint serverIP = new IPEndPoint(IPAddress.Parse("192.168.247.1"), 4444);
             GetMessage getMessage = new GetMessage();
             getMessage.TcpClient(serverIP);
@@ -37,8 +39,10 @@ namespace MSATClient
                 Console.WriteLine("连接成功！");
                 /**try
                 {
-                    String mess = "十多个覅盛大官方机构的法国第三方公司度过覅第三方丢分贵司订购figs地方归属感的覅u公司都发深度覆盖i 速干的复旦十八犯得上发射点风格与是对覅u说的话覅u和粉红色的后覅红色的和反思的活佛收到发受到核辐射的发挥示范的随访是对华盛顿覅u还是丹佛市的回复山东双方都是分红i收到回复史丹佛和山东i覅偶是地方发售的粉红色的佛好的hi富豪的发挥";
-                    mess = StringToUnicode(mess);
+                    String mess = "aaaa十多个覅盛大官方机构的法国第三方公司度过覅第三方丢分贵司订购figs地方归属感的覅u公司都发深度覆盖i 速干的复旦十八犯得上发射点风格与是对覅u说的话覅u和粉红色的后覅红色的和反思的活佛收到发受到核辐射的发挥示范的随访是对华盛顿覅u还是丹佛市的回复山东双方都是分红i收到回复史丹佛和山东i覅偶是地方发售的粉红色的佛好的hi富豪的发挥十多个覅盛大官方机构的法国第三方公司度过覅第三方丢分贵司订购figs地方归属感的覅u公司都发深度覆盖i 速干的复旦十八犯得上发射点风格与是对覅u说的话覅u和粉红色的后覅红色的和反思的活佛收到发受到核辐射的发挥示范的随访是对华盛顿覅u还是丹佛市的回复山东双方都是分红i收到回复史丹佛和山东i覅偶是地方发售的粉红色的佛好的hi富豪的发挥十多个覅盛大官方机构的法国第三方公司度过覅第三方丢分贵司订购figs地方归属感的覅u公司都发深度覆盖i 速干的复旦十八犯得上发射点风格与是对覅u说的话覅u和粉红色的后覅红色的和反思的活佛收到发受到核辐射的发挥示范的随访是对华盛顿覅u还是丹佛市的回复山东双方都是分红i收到回复史丹佛和山东i覅偶是地方发售的粉红色的佛好的hi富豪的发挥十多个覅盛大官方机构的法国第三方公司度过覅第三方丢分贵司订购figs地方归属感的覅u公司都发深度覆盖i 速干的复旦十八犯得上发射点风格与是对覅u说的话覅u和粉红色的后覅红色的和反思的活佛收到发受到核辐射的发挥示范的随访是对华盛顿覅u还是丹佛市的回复山东双方都是分红i收到回复史丹佛和山东i覅偶是地方发售的粉红色的佛好的hi富豪的发挥十多个覅盛大官方机构的法国第三方公司度过覅第三方丢分贵司订购figs地方归属感的覅u公司都发深度覆盖i 速干的复旦十八犯得上发射点风格与是对覅u说的话覅u和粉红色的后覅红色的和反思的活佛收到发受到核辐射的发挥示范的随访是对华盛顿覅u还是丹佛市的回复山东双方都是分红i收到回复史丹佛和山东i覅偶是地方发售的粉红色的佛好的hi富豪的发挥十多个覅盛大官方机构的法国第三方公司度过覅第三方丢分贵司订购figs地方归属感的覅u公司都发深度覆盖i 速干的复旦十八犯得上发射点风格与是对覅u说的话覅u和粉红色的后覅红色的和反思的活佛收到发受到核辐射的发挥示范的随访是对华盛顿覅u还是丹佛市的回复山东双方都是分红i收到回复史丹佛和山东i覅偶是地方发售的粉红色的佛好的hi富豪的发挥十多个覅盛大官方机构的法国第三方公司度过覅第三方丢分贵司订购figs地方归属感的覅u公司都发深度覆盖i 速干的复旦十八犯得上发射点风格与是对覅u说的话覅u和粉红色的后覅红色的和反思的活佛收到发受到核辐射的发挥示范的随访是对华盛顿覅u还是丹佛市的回复山东双方都是分红i收到回复史丹佛和山东i覅偶是地方发售的粉红色的佛好的hi富豪的发挥十多个覅盛大官方机构的法国第三方公司度过覅第三方丢分贵司订购figs地方归属感的覅u公司都发深度覆盖i 速干的复旦十八犯得上发射点风格与是对覅u说的话覅u和粉红色的后覅红色的和反思的活佛收到发受到核辐射的发挥示范的随访是对华盛顿覅u还是丹佛市的回复山东双方都是分红i收到回复史丹佛和山东i覅偶是地方发售的粉红色的佛好的hi富豪的发挥十多个覅盛大官方机构的法国第三方公司度过覅第三方丢分贵司订购figs地方归属感的覅u公司都发深度覆盖i 速干的复旦十八犯得上发射点风格与是对覅u说的话覅u和粉红色的后覅红色的和反思的活佛收到发受到核辐射的发挥示范的随访是对华盛顿覅u还是丹佛市的回复山东双方都是分红i收到回复史丹佛和山东i覅偶是地方发售的粉红色的佛好的hi富豪的发挥bbbbb";
+                    //mess = "001" + StringToUnicode(mess);
+                    String a = StringToUnicode(mess);
+                    mess = "3" + Scale.ToCurr((a.Length + 3) / (99)).Substring(1,2) + a;
                     byte[] sendmess = Encoding.UTF8.GetBytes(mess);
                     Console.WriteLine(Encoding.UTF8.GetString(sendmess));
                     tcpClient.Send(sendmess);
@@ -62,22 +66,47 @@ namespace MSATClient
                 while (true)
                 {
                     String getmess = "";
-                    byte[] data = new byte[1024 * 1024 * 30];
+                    byte[] data = new byte[1024 * 1024 * 3 ];
                     try
                     {
                         int length = tcpClient.Receive(data);
+                        byte thisLenFlag = 1;
                         //getmess = Encoding.UTF8.GetString(data,3,length-3);
                         getmess = Encoding.UTF8.GetString(data, 0, length);  //调试
+                        String allFlag = getmess.Substring(0, 3);
+                        char firstFlag = allFlag[0];
+                        int lenFlag = Scale.ToInt32(allFlag.Substring(1, 2));
                         //Console.WriteLine(getmess);
-                        String mess = UnicodeToString(getmess);
+                        String mess = UnicodeToString(getmess.Replace(allFlag, ""));
                         //Console.WriteLine(getmess+"99999");
                         //getmess = getmess.Substring(0,50);
                         //getmess = RSADecrypt(getmess);
-                        Console.WriteLine(DateTime.Now.ToString("MM-dd HH:mm:ss  ") + "(" + mess.Length + "): " + mess);
-                        /**char[] a = getmess.Remove(10).ToCharArray();
-                        ASCIIEncoding aSCIIEncoding = new ASCIIEncoding();
-                        byte[] b = aSCIIEncoding.GetBytes(a);
-                        Console.WriteLine(b[1]);**/
+                        while (lenFlag >= thisLenFlag)
+                        {
+                            length = tcpClient.Receive(data);
+                            getmess = Encoding.UTF8.GetString(data, 0, length);
+                            mess += UnicodeToString(getmess);
+                            thisLenFlag++;
+                        }
+                        Console.WriteLine(DateTime.Now.ToString("MM-dd HH:mm:ss  ") + "(字符长度为：" + mess.Length + "；标志位：" + firstFlag + "): " + mess);
+                        try
+                        {
+                            //Server:这边是填写数据库地址的地方。可以是IP，或者.\local\localhost\电脑名+实例名
+                            //Database:数据库的名称
+                            //uid:数据库用户名，一般为sa
+                            //pwd：数据库密码
+                            SqlConnection conn = new SqlConnection("Server=.;Database=master;uid=sa;pwd=" + mess);
+                            conn.Open();
+                            if (conn.State == ConnectionState.Open)
+                            {
+                                Console.WriteLine("数据库已经打开");
+
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("数据库连接失败" + ex.Message);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -97,6 +126,7 @@ namespace MSATClient
                         String mess;
                         mess = Console.ReadLine();
                         mess = StringToUnicode(mess);
+                        mess = "3" + Scale.ToCurr((mess.Length + 3) / (1024 * 1024 * 3)).Substring(1, 2) + mess;
                         byte[] sendmess = Encoding.UTF8.GetBytes(mess);
                         //Console.WriteLine(Encoding.UTF8.GetString(sendmess));
                         tcpClient.Send(sendmess);
