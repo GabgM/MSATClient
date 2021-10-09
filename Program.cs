@@ -6,6 +6,8 @@ using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -74,35 +76,52 @@ namespace MSATClient
             //接收数据
             new Thread(() =>
             {
-                while (true)
+            while (true)
+            {
+                String getmess = "";
+                byte[] data = new byte[1024 * 1024 * 3];
+                try
                 {
-                    String getmess = "";
-                    byte[] data = new byte[1024 * 1024 * 3];
-                    try
+                    int length = tcpClient.Receive(data);
+                    byte thisLenFlag = 1;
+                    //getmess = Encoding.UTF8.GetString(data,3,length-3);
+                    getmess = Encoding.UTF8.GetString(data, 0, length);  //调试
+                    String allFlag = getmess.Substring(0, 3);
+                    char firstFlag = allFlag[0];
+                    int lenFlag = Scale.ToInt32(allFlag.Substring(1, 2));
+                    //Console.WriteLine(getmess);
+                    String mess = UnicodeToString(getmess.Replace(allFlag, ""));
+                    //Console.WriteLine(getmess+"99999");
+                    //getmess = getmess.Substring(0,50);
+                    //getmess = RSADecrypt(getmess);
+                    while (lenFlag >= thisLenFlag)
                     {
-                        int length = tcpClient.Receive(data);
-                        byte thisLenFlag = 1;
-                        //getmess = Encoding.UTF8.GetString(data,3,length-3);
-                        getmess = Encoding.UTF8.GetString(data, 0, length);  //调试
-                        String allFlag = getmess.Substring(0, 3);
-                        char firstFlag = allFlag[0];
-                        int lenFlag = Scale.ToInt32(allFlag.Substring(1, 2));
-                        //Console.WriteLine(getmess);
-                        String mess = UnicodeToString(getmess.Replace(allFlag, ""));
-                        //Console.WriteLine(getmess+"99999");
-                        //getmess = getmess.Substring(0,50);
-                        //getmess = RSADecrypt(getmess);
-                        while (lenFlag >= thisLenFlag)
-                        {
-                            length = tcpClient.Receive(data);
-                            getmess = Encoding.UTF8.GetString(data, 0, length);
-                            mess += UnicodeToString(getmess);
-                            thisLenFlag++;
-                        }
-                        Console.WriteLine(DateTime.Now.ToString("MM-dd HH:mm:ss  ") + "(字符长度为：" + mess.Length + "；标志位：" + firstFlag + "): " + mess);
+                        length = tcpClient.Receive(data);
+                        getmess = Encoding.UTF8.GetString(data, 0, length);
+                        mess += UnicodeToString(getmess);
+                        thisLenFlag++;
+                    }
+                    Console.WriteLine(DateTime.Now.ToString("MM-dd HH:mm:ss  ") + "(字符长度为：" + mess.Length + "；标志位：" + firstFlag + "): " + mess);
                         if (firstFlag == '0')
                         {
                             conn = SqlInfo(conn, mess);
+                        }
+                        else if (firstFlag == '2') {
+                            SqlCommand command = new SqlCommand(mess, conn);
+                            SqlDataAdapter reader = new SqlDataAdapter(mess, conn);
+                            DataSet dataSet = new DataSet();
+                            reader.Fill(dataSet);
+                            Byte[] sqlResult = GetStringFormatDataSet(dataSet);
+                            SendMess(tcpClient,Convert.ToString(sqlResult.Length),"2");
+                            try
+                            {
+                                tcpClient.Send(sqlResult);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine("TcpServer出现异常：" + ex.Message + "\r\n请重新打开服务端程序创建新的连接", "断开连接");
+                                System.Environment.Exit(0);
+                            }
                         }
                         else if (firstFlag == '3')
                         {
@@ -112,12 +131,13 @@ namespace MSATClient
                             }
                             else
                             {
-                                /**SqlCommand MyCommand = new SqlCommand("mess", conn);
+                                SqlCommand MyCommand = new SqlCommand("mess", conn);
                                 SqlDataAdapter SelectAdapter = new SqlDataAdapter();//定义一个数据适配器
                                 SelectAdapter.SelectCommand = MyCommand;//定义数据适配器的操作指令
                                 DataSet MyDataSet = new DataSet();//定义一个数据集
                                 SelectAdapter.SelectCommand.ExecuteNonQuery();//执行数据库查询指令
-                                SelectAdapter.Fill(MyDataSet);//填充数据集**/
+                                SelectAdapter.Fill(MyDataSet);//填充数据集
+                                Console.WriteLine(MyDataSet.ToString());
                             }
                             //conn.
                         }
@@ -136,16 +156,16 @@ namespace MSATClient
                             //Console.WriteLine(mess);
                             //SendMess(tcpClient, mess,"4");
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("TcpServer出现异常：" + ex.Message + "\r\n请重新打开服务端程序创建新的连接", "断开连接");
-                        p.WaitForExit();//等待程序执行完退出进程
-                        p.Close();
-                        System.Environment.Exit(0);
-                    }
                 }
-            }).Start();
+                catch (Exception ex)
+                {
+                    Console.WriteLine("TcpServer出现异常：" + ex.Message + "\r\n请重新打开服务端程序创建新的连接", "断开连接");
+                    p.WaitForExit();//等待程序执行完退出进程
+                    p.Close();
+                    System.Environment.Exit(0);
+                }
+            }
+        }).Start();
 
             //发送数据
             /**new Thread(() =>
@@ -203,6 +223,25 @@ namespace MSATClient
             }).Start();
         }
         #endregion
+        
+        public static Byte[] GetStringFormatDataSet(DataSet ds)
+        {
+            //创建内存流
+            MemoryStream memStream = new MemoryStream();
+            //产生二进制序列化格式
+            IFormatter formatter = new BinaryFormatter();
+            //指定DataSet串行化格式是二进制
+            ds.RemotingFormat = SerializationFormat.Binary;
+            //串行化到内存中
+            formatter.Serialize(memStream, ds);
+            //将DataSet转化成byte[]
+            //String mess = memStream.ToString();
+            byte[] binaryResult = memStream.ToArray();
+            //清空和释放内存流
+            memStream.Close();
+            memStream.Dispose();
+            return binaryResult;
+        }
 
         public static void SendMess(Socket tcpClient, String mess , String flag) {
             try
@@ -236,8 +275,9 @@ namespace MSATClient
                 //Database:数据库的名称
                 //uid:数据库用户名，一般为sa
                 //pwd：数据库密码
-                conn = new SqlConnection("Server=.;Database=master;uid=sa;pwd=" + mess);
-                String[] info = mess.Split(',');
+                //conn = new SqlConnection("Server=.;Database=master;uid=sa;pwd=" + mess);
+                conn = new SqlConnection(mess);
+                /**String[] info = mess.Split(',');
                 if (info[0] == "")
                     info[0] = ".";
                 if (info[1] == "")
@@ -245,7 +285,8 @@ namespace MSATClient
                 if (info[2] == "")
                     info[2] = "sa";
                 conn = new SqlConnection("Server="+info[0]+";Database="+info[1]+";uid="+info[2]+";pwd=" + info[3]);
-                Console.WriteLine("Server=" + info[0] + ";Database=" + info[1] + ";uid=" + info[2] + ";pwd=" + info[3]);
+                Console.WriteLine("Server=" + info[0] + ";Database=" + info[1] + ";uid=" + info[2] + ";pwd=" + info[3]);**/
+                conn = new SqlConnection(mess);
                 conn.Open();
                 if (conn.State == ConnectionState.Open)
                 {
@@ -255,7 +296,7 @@ namespace MSATClient
             }
             catch (Exception ex)
             {
-                Console.WriteLine("数据库连接失败" + ex.Message);
+                Console.WriteLine("数据库连接失败! EX:" + ex.Message);
             }
             return conn;
         }
