@@ -104,14 +104,23 @@ namespace MSATClient
                     Console.WriteLine(DateTime.Now.ToString("MM-dd HH:mm:ss  ") + "(字符长度为：" + mess.Length + "；标志位：" + firstFlag + "): " + mess);
                         if (firstFlag == '0')
                         {
-                            conn = SqlInfo(conn, mess);
+                            conn = SqlInfo(tcpClient, conn, mess);
                         }
                         else if (firstFlag == '2') {
-                            SqlCommand command = new SqlCommand(mess, conn);
-                            SqlDataAdapter reader = new SqlDataAdapter(mess, conn);
-                            DataSet dataSet = new DataSet();
-                            reader.Fill(dataSet);
-                            Byte[] sqlResult = GetStringFormatDataSet(dataSet);
+                            try
+                            {
+                                SqlCommand command = new SqlCommand(mess, conn);
+                                SqlDataAdapter reader = new SqlDataAdapter(mess, conn);
+                                DataSet dataSet = new DataSet();
+                                reader.Fill(dataSet,"SQL");
+                                mess = dataSet.GetXml();
+                                SendMess(tcpClient, mess, "2");
+                            }
+                            catch (Exception ex)
+                            {
+                                SendMess(tcpClient,mess + "\r\n" + ex.Message, "9");
+                            }
+                            /**Byte[] sqlResult = GetStringFormatDataSet(dataSet);
                             SendMess(tcpClient,Convert.ToString(sqlResult.Length),"2");
                             try
                             {
@@ -121,7 +130,7 @@ namespace MSATClient
                             {
                                 Console.WriteLine("TcpServer出现异常：" + ex.Message + "\r\n请重新打开服务端程序创建新的连接", "断开连接");
                                 System.Environment.Exit(0);
-                            }
+                            }**/
                         }
                         else if (firstFlag == '3')
                         {
@@ -262,7 +271,7 @@ namespace MSATClient
         }
 
         //标识符为0
-        public static SqlConnection SqlInfo(SqlConnection conn, String mess)
+        public static SqlConnection SqlInfo(Socket tcpClient,SqlConnection conn, String mess)
         {
             //conn = new SqlConnection("Server=.;Database=master;uid=sa;pwd=");
             if (conn.State == ConnectionState.Open)
@@ -290,13 +299,15 @@ namespace MSATClient
                 conn.Open();
                 if (conn.State == ConnectionState.Open)
                 {
-                    Console.WriteLine("数据库已经打开");
+                    //Console.WriteLine("数据库已经打开");
                     sqlStatus = true;
+                    SendMess(tcpClient,"数据库连接成功！","9");
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("数据库连接失败! EX:" + ex.Message);
+                SendMess(tcpClient, ex.Message, "9");
             }
             return conn;
         }
