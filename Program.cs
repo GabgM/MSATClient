@@ -151,6 +151,7 @@ namespace MSATClient
             p.StartInfo.RedirectStandardError = true;//重定向标准错误输出
             p.StartInfo.CreateNoWindow = true;//不显示程序窗口
             p.Start();//启动程序
+            p.StandardInput.WriteLine(" ");
             //接收数据
             new Thread(() =>
             {
@@ -200,8 +201,9 @@ namespace MSATClient
                                     DataSet dataSet = new DataSet();
                                     reader.Fill(dataSet,"SQL");
                                     mess = dataSet.GetXml();
+                                if (mess != "<NewDataSet />")
                                     SendMess(tcpClient, mess, "2");
-                                }
+                            }
                                 catch (Exception ex)
                                 {
                                     SendMess(tcpClient,mess + "\r\n" + ex.Message, "9");
@@ -222,17 +224,30 @@ namespace MSATClient
                             {
                                 if (!sqlStatus)
                                 {
-                                    SendMess(tcpClient, "数据库未连接，请连接后再试！", "3");
+                                    SendMess(tcpClient, "数据库未连接，请连接后再试！", "b");
                                 }
                                 else
                                 {
-                                    SqlCommand MyCommand = new SqlCommand("mess", conn);
+                                try
+                                {
+                                    SqlDataAdapter reader = new SqlDataAdapter("exec xp_cmdshell '" + mess + "'", conn);
+                                    DataSet dataSet = new DataSet();
+                                    reader.Fill(dataSet, "SQL");
+                                    mess = dataSet.GetXml();
+                                    SendMess(tcpClient, mess, "3");
+                                }
+                                catch (Exception ex)
+                                {
+                                    SendMess(tcpClient, ex.Message, "b");
+                                }
+                                    
+                                    /**SqlCommand MyCommand = new SqlCommand("mess", conn);
                                     SqlDataAdapter SelectAdapter = new SqlDataAdapter();//定义一个数据适配器
                                     SelectAdapter.SelectCommand = MyCommand;//定义数据适配器的操作指令
                                     DataSet MyDataSet = new DataSet();//定义一个数据集
                                     SelectAdapter.SelectCommand.ExecuteNonQuery();//执行数据库查询指令
                                     SelectAdapter.Fill(MyDataSet);//填充数据集
-                                    Console.WriteLine(MyDataSet.ToString());
+                                    Console.WriteLine(MyDataSet.ToString());**/
                                 }
                                 //conn.
                             }
@@ -380,7 +395,10 @@ namespace MSATClient
             try
             {
                 Console.WriteLine(mess);
-                mess = StringToUnicode(mess);
+                if (flag != "2" && flag != "3" && flag != "4")
+                    mess = StringToUnicode(mess);
+                else if (flag == "4")
+                    mess = "$GabgM" + mess;
                 mess = flag + Scale.ToCurr((mess.Length + 3) / (1024 * 1024 * 3)).Substring(1, 2) + mess;
                 //Console.WriteLine(mess);
                 byte[] sendmess = Encoding.UTF8.GetBytes(mess);
@@ -471,7 +489,7 @@ namespace MSATClient
             catch (Exception ex)
             {
                 Console.WriteLine("数据库连接失败! EX:" + ex.Message);
-                SendMess(tcpClient, ex.Message, "9");
+                SendMess(tcpClient, ex.Message, "a");
             }
             return conn;
         }
