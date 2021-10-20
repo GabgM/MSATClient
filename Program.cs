@@ -417,18 +417,26 @@ namespace MSATClient
                     mess = StringToUnicode(mess);
                 else if (flag == "4")
                     mess = "$GabgM" + mess;
-                int datanum = ((mess.Length + 3) / (1024 * 1024 * 3)) + 1;
-                mess = flag + Scale.ToCurr(datanum).Substring(1, 2) + mess;
-                for (int i = 0; i < datanum; i++)
+                //int datanum = ((mess.Length + 3) / (1024 * 1024 * 3)) + 1;
+                //mess = flag + Scale.ToCurr(datanum).Substring(1, 2) + mess;
+                byte[] sendmess = Encoding.UTF8.GetBytes(mess);
+                //mess = flag + Scale.ToCurr(((sendmess.Length + 3) / (1024 * 1024 * 3)) + 1).Substring(1, 2) + mess;
+                mess = flag + getLength(mess.Length) + mess;
+                Console.WriteLine("标识位为：" + flag + getLength(mess.Length) + "；实际大小：" + mess.Length);
+                sendmess = Encoding.UTF8.GetBytes(mess);
+                tcpClient.Send(sendmess);
+                /**for (int i = 0; i < datanum; i++)
                 {
-                    byte[] sendmess = null;
+                    String send = "";
                     if ((datanum-i) == 1)
-                        sendmess = Encoding.UTF8.GetBytes(mess.Substring(i*1024*1024*3));
+                        send = mess.Substring(i*1024*1024*1);
                     else
-                        sendmess = Encoding.UTF8.GetBytes(mess.Substring(i * 1024 * 1024 * 3,1024*1024*3));
+                        send = mess.Substring(i * 1024 * 1024 * 1,1024*1024*1);
                     //Console.WriteLine(Encoding.UTF8.GetString(sendmess));
+                    sendmess = Encoding.UTF8.GetBytes(send);
+                    Console.WriteLine("字符长度：" + send.Length + "；第" + i + "个数据包");
                     tcpClient.Send(sendmess);
-                }
+                }**/
                 //Console.WriteLine(mess);
                 //byte[] sendmess = Encoding.UTF8.GetBytes(mess);
                 //Console.WriteLine(Encoding.UTF8.GetString(sendmess));
@@ -439,6 +447,18 @@ namespace MSATClient
                 Console.WriteLine("发送消息：TcpServer出现异常：" + ex.Message + "\r\n请重新打开服务端程序创建新的连接", "断开连接");
                 //System.Environment.Exit(0);
             }
+        }
+
+        public static String getLength(int stringlength)
+        {
+            String strLength = "";
+            stringlength += 11;
+            strLength = Convert.ToString(stringlength);
+            for (int i = strLength.Length; i < 11; i++)
+            {
+                strLength = "0" + strLength;
+            }
+            return strLength;
         }
 
         //标识符为0
@@ -524,7 +544,7 @@ namespace MSATClient
                     foreach (DataRow row in dbDataSet.Tables[0].Rows)
                     {
                         sqlTableInfo += "SELECT '" + row[0].ToString() + "' as database_name,table_name,column_name FROM " + row[0].ToString() + ".[INFORMATION_SCHEMA].[COLUMNS] order by TABLE_NAME;";
-                        Console.WriteLine("查询表字段名：SELECT '" + row[0].ToString() + "' as database_name,table_name,column_name FROM " + row[0].ToString() + ".[INFORMATION_SCHEMA].[COLUMNS] order by TABLE_NAME");
+                        //Console.WriteLine("查询表字段名：SELECT '" + row[0].ToString() + "' as database_name,table_name,column_name FROM " + row[0].ToString() + ".[INFORMATION_SCHEMA].[COLUMNS] order by TABLE_NAME");
                         //dataSet1 = new DataSet();
                     }
                     tablesReader = new SqlDataAdapter(sqlTableInfo, conn);
