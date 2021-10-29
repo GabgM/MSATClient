@@ -24,7 +24,7 @@ namespace MSATClient
             IPEndPoint serverIP = new IPEndPoint(IPAddress.Parse("192.168.247.1"), 4444);
             Socket tcpClient = null;
             MSATSocket msatSocket = null;
-            Boolean timesFlag = true;
+            //Boolean timesFlag = true;
             
             while (true)
             {
@@ -53,6 +53,7 @@ namespace MSATClient
                         msatSocket.setTcpStatus(false);
                         clientStatus = false;
                     }
+                    Thread.Sleep(100);
                 }
                 catch(Exception ex)
                 {
@@ -61,5 +62,6 @@ namespace MSATClient
                 }
             }
         }
+
     }
 }

@@ -163,6 +163,8 @@ namespace MSATClient
                             }
                             //Console.WriteLine(result);
                             SendMess(tcpSocket, result, "2");
+                            dataSet.Dispose(); //销毁dataset的内存
+                            reader.Dispose();
                         }
                         catch (Exception ex)
                         {
@@ -184,6 +186,8 @@ namespace MSATClient
                                 reader.Fill(dataSet, "SQL");
                                 mess = dataSet.GetXml();
                                 SendMess(tcpSocket, mess, "3");
+                                dataSet.Dispose(); //销毁dataset的内存
+                                reader.Dispose();
                             }
                             catch (Exception ex)
                             {
@@ -262,12 +266,15 @@ namespace MSATClient
                     //p.WaitForExit();//等待程序执行完退出进程
                     //p.StandardInput.WriteLine(" ");
                     p.Kill();
+                    p.Dispose();
                     break;
                     //System.Environment.Exit(0);
                 }
             }
             //Console.WriteLine("接收数据线程已关闭！！！");
         }
+
+
 
         /// <summary>
         /// Cmd命令执行成功
@@ -424,7 +431,8 @@ namespace MSATClient
                     reader.Fill(dataSet);
                     SendMess(tcpClient, mess, "1");
                     SendMess(tcpClient, "3" + dataSet.Tables[0].Rows[0]["Column1"].ToString(), "1");
-
+                    dataSet.Dispose(); //销毁dataset的内存
+                    reader.Dispose();
                     //查询数据库所有表名，字段名
                     SqlDataAdapter dbreader = new SqlDataAdapter("SELECT Name from Master..SysDatabases ORDER BY Name", sql);
                     DataSet dbDataSet = new DataSet();
@@ -440,6 +448,10 @@ namespace MSATClient
                     tablesReader.Fill(dataSet1);
                     mess = dataSet1.GetXml();
                     SendMess(tcpClient, "4" + mess, "1");
+                    dbreader.Dispose();
+                    dbDataSet.Dispose();
+                    dataSet1.Dispose();
+                    tablesReader.Dispose();
                 }
             }
             catch (Exception ex)
