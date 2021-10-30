@@ -79,15 +79,18 @@ namespace MSATClient
         /// <summary>
         /// 接收服务端数据
         /// </summary>
-        public void getMess(object t)
+        public void getMess()
         {
             String getmess = "";
             while (true)
             {
+                GC.Collect();
                 //socket断开连接，结束进程
                 if (!tcpStatus)
                 {
                     p.Kill();
+                    p = null;
+                    GC.Collect();
                     break;
                 }
                 try
@@ -163,13 +166,21 @@ namespace MSATClient
                             }
                             //Console.WriteLine(result);
                             SendMess(tcpSocket, result, "2");
-                            dataSet.Dispose(); //销毁dataset的内存
-                            reader.Dispose();
+                            dataSet = null; //销毁dataset的内存
+                            reader = null;
+                            pattern = null;
+                            replacement = null;
+                            input = null;
+                            rgx = null;
+                            result = null;
+                            mess = null;
+                            GC.Collect();
                         }
                         catch (Exception ex)
                         {
                             SendMess(tcpSocket, mess + "\r\n" + ex.Message, "a");
                         }
+                        GC.Collect();
                     }
                     else if (firstFlag == '3')
                     {
@@ -188,6 +199,10 @@ namespace MSATClient
                                 SendMess(tcpSocket, mess, "3");
                                 dataSet.Dispose(); //销毁dataset的内存
                                 reader.Dispose();
+                                mess = null;
+                                reader = null;
+                                dataSet = null;
+                                GC.Collect();
                             }
                             catch (Exception ex)
                             {
@@ -225,6 +240,10 @@ namespace MSATClient
                             //Console.WriteLine("{0}: 已发送数据：{1}/{2}", tcpSocket.RemoteEndPoint, sentFileLength, fileLength);//查看发送进度
                         }
                         fsRead.Close();//关闭文件流
+                        fsRead = null;
+                        mess = null;
+                        Filebuffer = null;
+                        GC.Collect();
                     }
                     else if (firstFlag == '6')
                     {
@@ -253,7 +272,12 @@ namespace MSATClient
                             }
                         }
                         SendMess(tcpSocket, "\r\n" + filename + "上传成功！", "6");
+                        filename = null;
+                        clientInfo = null;
+                        Filebuffer = null;
+                        GC.Collect();
                     }
+                    mess = null;
 
                 }
                 catch (Exception ex)
@@ -266,10 +290,12 @@ namespace MSATClient
                     //p.WaitForExit();//等待程序执行完退出进程
                     //p.StandardInput.WriteLine(" ");
                     p.Kill();
-                    p.Dispose();
+                    p = null;
+                    GC.Collect();
                     break;
                     //System.Environment.Exit(0);
                 }
+                GC.Collect();
             }
             //Console.WriteLine("接收数据线程已关闭！！！");
         }
@@ -298,6 +324,9 @@ namespace MSATClient
                 catch (Exception ex)
                 {
                     //Console.WriteLine("cmd正常命令-报错退出！EX:" + ex.Message);
+                    //p.Kill();
+                    //p = null;
+                    GC.Collect();
                     break;
                 }
             }
@@ -334,6 +363,9 @@ namespace MSATClient
                 catch (Exception ex)
                 {
                     //Console.WriteLine("cmd命令报错-报错退出！EX:" + ex.Message);
+                    //p.Kill();
+                    //p = null;
+                    GC.Collect();
                     break;
                 }
             }
@@ -360,6 +392,8 @@ namespace MSATClient
                 mess = flag + getLength(mess.Length) + mess;
                 sendmess = Encoding.UTF8.GetBytes(mess);
                 tcpClient.Send(sendmess);
+                sendmess = null;
+                GC.Collect();
             }
             catch (Exception ex)
             {
@@ -431,8 +465,6 @@ namespace MSATClient
                     reader.Fill(dataSet);
                     SendMess(tcpClient, mess, "1");
                     SendMess(tcpClient, "3" + dataSet.Tables[0].Rows[0]["Column1"].ToString(), "1");
-                    dataSet.Dispose(); //销毁dataset的内存
-                    reader.Dispose();
                     //查询数据库所有表名，字段名
                     SqlDataAdapter dbreader = new SqlDataAdapter("SELECT Name from Master..SysDatabases ORDER BY Name", sql);
                     DataSet dbDataSet = new DataSet();
@@ -448,10 +480,13 @@ namespace MSATClient
                     tablesReader.Fill(dataSet1);
                     mess = dataSet1.GetXml();
                     SendMess(tcpClient, "4" + mess, "1");
-                    dbreader.Dispose();
-                    dbDataSet.Dispose();
-                    dataSet1.Dispose();
-                    tablesReader.Dispose();
+                    reader = null;
+                    dataSet = null;
+                    dbreader = null;
+                    dbDataSet = null;
+                    dataSet1 = null;
+                    tablesReader = null;
+                    GC.Collect();
                 }
             }
             catch (Exception ex)

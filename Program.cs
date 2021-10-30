@@ -54,11 +54,15 @@ namespace MSATClient
                         clientStatus = false;
                     }
                     Thread.Sleep(100);
+                    GC.Collect();
                 }
                 catch(Exception ex)
                 {
+                    tcpClient = null;
                     //Console.WriteLine("Socket连接失败或异常中断！EX："+ex.Message);
-                    msatSocket.setTcpStatus(false);
+                    //msatSocket.setTcpStatus(false);
+                    msatSocket = null;
+                    GC.Collect();
                 }
             }
         }
