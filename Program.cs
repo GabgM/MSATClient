@@ -1,17 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
-using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace MSATClient
@@ -19,15 +8,70 @@ namespace MSATClient
     class Program
     {
         static Boolean clientStatus = false;
+        static long startTimeStamp = GetTimeStamp();
+        static String serverIPAdress = "192.168.1.1";
+        static short serverPort = 4444;
+        static long stayTime = -1;
+        static long endTimeStamp = 0;
+
         static void Main(string[] args)
         {
-            IPEndPoint serverIP = new IPEndPoint(IPAddress.Parse("192.168.247.1"), 4444);
+            IPEndPoint serverIP = null;
+            if (args != null)
+            {
+                if (args.Length == 2)
+                {
+                    serverIPAdress = args[0];
+                    serverPort = Convert.ToInt16(args[1]);
+                }
+                else if (args.Length == 3)
+                {
+                    serverIPAdress = args[0];
+                    serverPort = Convert.ToInt16(args[1]);
+                    endTimeStamp = Convert.ToInt64(args[2]) * 60 + startTimeStamp;
+                }
+                else
+                {
+                    Console.WriteLine("错误：无效参数！");
+                    Console.WriteLine("参数：MSATClient.exe IP PORT TIME");
+                    Console.WriteLine("\rTIME为可选参数，单位为分钟，表示客户端程序持续运行时间，时间耗尽后自动关闭客户端程序，默认不关闭。(不会销毁客户端程序文件！)");
+                    Console.WriteLine("例：MSATClient.exe 8.8.8.8 4444 60");
+                    System.Environment.Exit(System.Environment.ExitCode);
+                }
+            }
+            else
+            {
+                Console.WriteLine("错误：无效参数！");
+                Console.WriteLine("参数：MSATClient.exe IP PORT TIME");
+                Console.WriteLine("\rTIME为可选参数，单位为分钟，表示客户端程序持续运行时间，时间耗尽后自动关闭客户端程序，默认不关闭。(不会销毁客户端程序文件！)");
+                Console.WriteLine("例：MSATClient.exe 8.8.8.8 4444 60");
+                System.Environment.Exit(System.Environment.ExitCode);
+            }
+            try
+            {
+                serverIP = new IPEndPoint(IPAddress.Parse(serverIPAdress), serverPort);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("错误：无效参数！");
+                Console.WriteLine("参数：MSATClient.exe IP PORT TIME");
+                Console.WriteLine("\rTIME为可选参数，单位为分钟，表示客户端程序持续运行时间，时间耗尽后自动关闭客户端程序，默认不关闭。(不会销毁客户端程序文件！)");
+                Console.WriteLine("例：MSATClient.exe 8.8.8.8 4444 60");
+                System.Environment.Exit(System.Environment.ExitCode);
+            }
             Socket tcpClient = null;
             MSATSocket msatSocket = null;
             //Boolean timesFlag = true;
-            
+
             while (true)
             {
+                if (endTimeStamp != 0)
+                {
+                    if (GetTimeStamp() > endTimeStamp)
+                    {
+                        System.Environment.Exit(System.Environment.ExitCode);
+                    }
+                }
                 msatSocket = new MSATSocket();
                 try
                 {
@@ -65,6 +109,16 @@ namespace MSATClient
                     GC.Collect();
                 }
             }
+        }
+
+        /// <summary>
+        /// 获取时间戳
+        /// </summary>
+        /// <returns></returns>
+        public static long GetTimeStamp()
+        {
+            TimeSpan ts = DateTime.Now - new DateTime(1970, 1, 1, 0, 0, 0, 0);
+            return Convert.ToInt64(ts.TotalSeconds);
         }
 
     }

