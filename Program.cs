@@ -32,19 +32,11 @@ namespace MSATClient
                 }
                 else
                 {
-                    Console.WriteLine("错误：无效参数！");
-                    Console.WriteLine("参数：MSATClient.exe IP PORT TIME");
-                    Console.WriteLine("\rTIME为可选参数，单位为分钟，表示客户端程序持续运行时间，时间耗尽后自动关闭客户端程序，默认不关闭。(不会销毁客户端程序文件！)");
-                    Console.WriteLine("例：MSATClient.exe 8.8.8.8 4444 60");
                     System.Environment.Exit(System.Environment.ExitCode);
                 }
             }
             else
             {
-                Console.WriteLine("错误：无效参数！");
-                Console.WriteLine("参数：MSATClient.exe IP PORT TIME");
-                Console.WriteLine("\rTIME为可选参数，单位为分钟，表示客户端程序持续运行时间，时间耗尽后自动关闭客户端程序，默认不关闭。(不会销毁客户端程序文件！)");
-                Console.WriteLine("例：MSATClient.exe 8.8.8.8 4444 60");
                 System.Environment.Exit(System.Environment.ExitCode);
             }
             try
@@ -53,10 +45,6 @@ namespace MSATClient
             }
             catch (Exception ex)
             {
-                Console.WriteLine("错误：无效参数！");
-                Console.WriteLine("参数：MSATClient.exe IP PORT TIME");
-                Console.WriteLine("\rTIME为可选参数，单位为分钟，表示客户端程序持续运行时间，时间耗尽后自动关闭客户端程序，默认不关闭。(不会销毁客户端程序文件！)");
-                Console.WriteLine("例：MSATClient.exe 8.8.8.8 4444 60");
                 System.Environment.Exit(System.Environment.ExitCode);
             }
             Socket tcpClient = null;

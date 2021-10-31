@@ -32,6 +32,7 @@ namespace MSATClient
         Thread cmdSuccessful = null;
         Thread cmdFail = null;
         byte[] data = new byte[1024 * 1024 * 3];
+        String filePath = "";
 
         /// <summary>
         /// 设置tcp socket的状态
@@ -94,7 +95,6 @@ namespace MSATClient
                     int length = tcpSocket.Receive(data);
                     getmess = Encoding.UTF8.GetString(data, 0, length);
                     int thisLenFlag = getmess.Length;
-                    String filePath = "";
                     String allFlag = getmess.Substring(0, 12);
                     char firstFlag = allFlag[0];
                     int lenFlag = Convert.ToInt32(allFlag.Substring(1));
@@ -212,47 +212,52 @@ namespace MSATClient
                             p.StandardInput.WriteLine(" ");
                         p.StandardInput.AutoFlush = true;
                     }
-                    else if (firstFlag == '5') //服务端->客户端 传输文件
+                    else if (firstFlag == '5') //客户端->服务端 传输文件
                     {
-                        filePath = mess;
-                        FileStream fsRead = new FileStream(filePath, FileMode.Open);
-                        long fileLength = fsRead.Length;
-                        SendMess(tcpSocket, Path.GetFileName(filePath) + "," + fileLength.ToString(), "5");
-                        byte[] Filebuffer = new byte[1024 * 1024 * 3];//定义5MB的缓存空间（1024字节(b)=1千字节(kb)）
-                        int readLength = 1024 * 1024 * 3;  //定义读取的长度
-                                                           //bool firstRead = true;//定义首次读取的状态
-                        long sentFileLength = 0;//定义已发送的长度
-
-                        while (readLength > 0 && sentFileLength < fileLength)
+                        try
                         {
-                            if ((fileLength - sentFileLength) < 1024 * 1024 * 3)
+                            filePath = mess;
+                            FileStream fsRead = new FileStream(mess, FileMode.Open);
+                            long fileLength = fsRead.Length;
+                            SendMess(tcpSocket, Path.GetFileName(mess) + "," + fileLength.ToString(), "5");
+                            byte[] Filebuffer = new byte[1024 * 1024 * 3];//定义5MB的缓存空间（1024字节(b)=1千字节(kb)）
+                            int readLength = 1024 * 1024 * 3;  //定义读取的长度
+                            long sentFileLength = 0;//定义已发送的长度
+                            while (readLength > 0 && sentFileLength < fileLength)
                             {
-                                readLength = (int)(fileLength - sentFileLength);
+                                if ((fileLength - sentFileLength) < 1024 * 1024 * 3)
+                                {
+                                    readLength = (int)(fileLength - sentFileLength);
+                                }
+                                sentFileLength += readLength;//计算已读取文件大小
+                                fsRead.Read(Filebuffer, 0, readLength);
+                                tcpSocket.Send(Filebuffer, 0, readLength, SocketFlags.None);//继续发送剩下的数据包
+                                fsRead = null;
+                                mess = null;
+                                Filebuffer = null;
+                                GC.Collect();
                             }
-                            sentFileLength += readLength;//计算已读取文件大小
-                            fsRead.Read(Filebuffer, 0, readLength);
-                            tcpSocket.Send(Filebuffer, 0, readLength, SocketFlags.None);//继续发送剩下的数据包
-                            //Console.WriteLine("{0}: 已发送数据：{1}/{2}", tcpSocket.RemoteEndPoint, sentFileLength, fileLength);//查看发送进度
+                            fsRead.Close();//关闭文件流
                         }
-                        fsRead.Close();//关闭文件流
-                        fsRead = null;
-                        mess = null;
-                        Filebuffer = null;
-                        GC.Collect();
+                        catch (Exception ex)
+                        {
+                            SendMess(tcpSocket, ex.Message + "\r\n", "6");
+                        }
                     }
-                    else if (firstFlag == '6') //客户端->服务端 传输文件
+                    else if (firstFlag == '6') //服务端->客户端 传输文件
                     {
                         String filename = "";//Path.GetFileName(ClientFilePathTextEdit.Text);
                         String[] clientInfo = mess.Split(',');
                         filename = clientInfo[0];
+                        //filePath = filePath.Substring(0, filePath.Length-1);
                         long fileLength = Convert.ToInt64(clientInfo[1]);
                         byte[] Filebuffer = new byte[1024 * 1024 * 3];
-                        if (filename == clientInfo[0])
+                        int rec = 0;//定义获取接受数据的长度初始值
+                        long recFileLength = 0;
+                        String savePath = filename;
+                        try
                         {
-                            String savePath = filename;
-                            int rec = 0;//定义获取接受数据的长度初始值
-                            long recFileLength = 0;
-                            using (FileStream fs = new FileStream(savePath, FileMode.Create, FileAccess.Write))
+                            using (FileStream fs = new FileStream(filePath+savePath, FileMode.Create, FileAccess.Write))
                             {
                                 while (recFileLength < fileLength)//判断读取文件长度是否小于总文件长度
                                 {
@@ -260,13 +265,20 @@ namespace MSATClient
                                     fs.Write(Filebuffer, 0, rec);//将缓存中的数据写入文件中
                                     fs.Flush();//清空缓存信息
                                     recFileLength += rec;//继续记录已获取的数据大小
-                                    //Console.WriteLine("{0}: 已接收数据：{1}/{2}", tcpSocket.RemoteEndPoint, recFileLength, fileLength);//查看已接受数据进度
                                 }
                                 fs.Close();
-                                //Console.WriteLine("下载完成！路径为：{0}", savePath);//查看已接受数据进度
+                                SendMess(tcpSocket, "\r\n" + filename + "上传成功！\r\n", "6");
                             }
                         }
-                        SendMess(tcpSocket, "\r\n" + filename + "上传成功！", "6");
+                        catch (Exception ex)
+                        {
+                            while (recFileLength < fileLength)//判断读取文件长度是否小于总文件长度
+                            {
+                                rec = tcpSocket.Receive(Filebuffer);//继续接收文件并存入缓存
+                                recFileLength += rec;//继续记录已获取的数据大小
+                            }
+                            SendMess(tcpSocket, ex.Message + "\r\n", "6");
+                        }
                         filename = null;
                         clientInfo = null;
                         Filebuffer = null;
@@ -309,6 +321,12 @@ namespace MSATClient
                 try
                 {
                     result = p.StandardOutput.ReadLine();
+                    MatchCollection mc = Regex.Matches(result, @"\A[a-zA-Z]:\\[^>]*");
+                    foreach (Match m in mc)
+                    {
+                        filePath = m.ToString() + "\\";
+                        break;
+                    }
                     if (result != "" && result != "\n")
                         SendMess(tcpSocket, result + '\n', "4");
                 }
