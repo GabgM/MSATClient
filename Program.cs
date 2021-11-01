@@ -10,7 +10,7 @@ namespace MSATClient
         static Boolean clientStatus = false;
         static long startTimeStamp = GetTimeStamp();
         static String serverIPAdress = "192.168.1.1";
-        static short serverPort = 4444;
+        static int serverPort = 4444;
         static long stayTime = -1;
         static long endTimeStamp = 0;
 
@@ -22,12 +22,12 @@ namespace MSATClient
                 if (args.Length == 2)
                 {
                     serverIPAdress = args[0];
-                    serverPort = Convert.ToInt16(args[1]);
+                    serverPort = Convert.ToInt32(args[1]);
                 }
                 else if (args.Length == 3)
                 {
                     serverIPAdress = args[0];
-                    serverPort = Convert.ToInt16(args[1]);
+                    serverPort = Convert.ToInt32(args[1]);
                     endTimeStamp = Convert.ToInt64(args[2]) * 60 + startTimeStamp;
                 }
                 else

