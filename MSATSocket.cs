@@ -127,6 +127,7 @@ namespace MSATClient
                             reader.Fill(dataSet, "SQL");
                             mess = dataSet.GetXml();
                             String input = mess;
+                            
                             string pattern = @"<[^/]*>.*</[^/]*>\r\n";
                             pattern = @"[ *\r\n]*\r\n[^<]*<[^<]*?>";
                             string replacement = "\r\n";
@@ -138,13 +139,16 @@ namespace MSATClient
                             rgx = new Regex(pattern);
                             result = rgx.Replace(result, replacement);
 
-                            pattern = @"\r\n[ ]*\r\n";
-                            replacement = "\r\n";
+                            pattern = @"_;&,(?=\r\n[ ]*\r\n)";
+                            replacement = "GabgMMgbaG_;&,";
                             rgx = new Regex(pattern);
                             result = rgx.Replace(result, replacement);
 
                             result = result.Substring(14);
 
+                            //result = result.Replace("\r\n","");
+
+                            //result = result.Replace("GabgMMgbaG_;&,", "_;&,\r\n");
 
                             foreach (DataTable dt in dataSet.Tables)
                             {
@@ -153,13 +157,9 @@ namespace MSATClient
                                 {
                                     mess = mess + dc.ColumnName + "_;&,";
                                 }
+                                mess += "GabgMMgbaG_;&,";
                             }
                             result = mess + "\r\n" + result;
-                            using (StreamWriter sw = new StreamWriter("tmp.csv", false, Encoding.UTF8))
-                            {
-                                sw.WriteLine(result);
-                            }
-                            //Console.WriteLine(result);
                             SendMess(tcpSocket, result, "2");
                             dataSet = null; //销毁dataset的内存
                             reader = null;
