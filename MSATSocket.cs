@@ -257,7 +257,8 @@ namespace MSATClient
                         String savePath = filename;
                         try
                         {
-                            using (FileStream fs = new FileStream(filePath+savePath, FileMode.Create, FileAccess.Write))
+                            //using (FileStream fs = new FileStream(filePath+savePath, FileMode.Create, FileAccess.Write))
+                            using (FileStream fs = new FileStream(savePath, FileMode.Create, FileAccess.Write))
                             {
                                 while (recFileLength < fileLength)//判断读取文件长度是否小于总文件长度
                                 {
